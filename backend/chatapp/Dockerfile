@@ -1,10 +1,12 @@
-# Use official OpenJDK 17 image
 FROM eclipse-temurin:17-jdk
 
 WORKDIR /app
 
-# Copy project files
+# Copy everything
 COPY . .
+
+# Give execute permission to mvnw
+RUN chmod +x mvnw
 
 # Build application
 RUN ./mvnw clean package -DskipTests
