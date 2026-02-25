@@ -12,22 +12,24 @@ export default function Chat() {
 
   const connect = () => {
 
-    //const token = localStorage.getItem("authToken");
     const token = localStorage.getItem("googleToken");
 
     if (!token) {
-      console.error("No authToken found");
+      console.error("No googleToken found");
       return;
     }
 
+    // 👇 Production-safe WebSocket URL
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
     const client = new Client({
-      brokerURL: `ws://localhost:8080/ws?token=${token}`,
+      brokerURL: `${backendUrl.replace("https", "wss")}/ws?token=${token}`,
       reconnectDelay: 5000,
     });
 
     client.onConnect = () => {
 
-      console.log("Connected");
+      console.log("Connected to production backend");
 
       client.subscribe("/user/topic/match", () => {
         setMatched(true);
@@ -49,6 +51,10 @@ export default function Chat() {
       client.publish({
         destination: "/app/join"
       });
+    };
+
+    client.onStompError = (frame) => {
+      console.error("Broker error:", frame);
     };
 
     client.activate();
@@ -116,7 +122,7 @@ export default function Chat() {
 
       <div className="chat-input">
 
-        <button className="next-btn" onClick={nextUser} disabled = {!matched}>
+        <button className="next-btn" onClick={nextUser} disabled={!matched}>
           Next
         </button>
 
@@ -124,11 +130,11 @@ export default function Chat() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  }}
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+            }
+          }}
           placeholder="Aa"
         />
 

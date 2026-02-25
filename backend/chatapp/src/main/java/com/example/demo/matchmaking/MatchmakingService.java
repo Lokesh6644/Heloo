@@ -4,8 +4,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Queue;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.Map;
 
 @Service
@@ -14,45 +14,52 @@ public class MatchmakingService {
     private final Queue<String> waitingUsers = new ConcurrentLinkedQueue<>();
     private final Map<String, String> activeChats = new ConcurrentHashMap<>();
 
-    public synchronized String findMatch(String sessionId) {
+    public synchronized String findMatch(String email) {
 
-        if (!waitingUsers.isEmpty()) {
+        if (activeChats.containsKey(email)) {
+            return null;
+        }
+
+        while (!waitingUsers.isEmpty()) {
             String partner = waitingUsers.poll();
 
-            if (partner != null && !partner.equals(sessionId)) {
-                String chatId = UUID.randomUUID().toString();
+            if (partner != null && !partner.equals(email)) {
 
-                activeChats.put(sessionId, partner);
-                activeChats.put(partner, sessionId);
+                activeChats.put(email, partner);
+                activeChats.put(partner, email);
 
-                return chatId;
+                return UUID.randomUUID().toString();
             }
         }
 
-        waitingUsers.add(sessionId);
+        if (!waitingUsers.contains(email)) {
+            waitingUsers.add(email);
+        }
+
         return null;
     }
 
-    public String getPartner(String sessionId) {
-        return activeChats.get(sessionId);
+    public String getPartner(String email) {
+        return activeChats.get(email);
     }
 
-    public synchronized void skip(String sessionId) {
+    public synchronized void skip(String email) {
 
-        String partner = activeChats.remove(sessionId);
+        String partner = activeChats.remove(email);
 
         if (partner != null) {
             activeChats.remove(partner);
+            waitingUsers.add(partner);
         }
 
-        waitingUsers.remove(sessionId);
+        waitingUsers.remove(email);
     }
 
-    public synchronized String disconnectUser(String sessionId) {
+    public synchronized String disconnectUser(String email) {
 
-        waitingUsers.remove(sessionId);
+        waitingUsers.remove(email);
 
-        String partner = activeChats.remove(sessionId);
+        String partner = activeChats.remove(email);
 
         if (partner != null) {
             activeChats.remove(partner);

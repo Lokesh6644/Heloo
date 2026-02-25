@@ -9,11 +9,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
-import java.util.HashMap;
-import java.util.Map;
-
-
-
 
 @Controller
 public class ChatController {
@@ -27,15 +22,32 @@ public class ChatController {
         this.messagingTemplate = messagingTemplate;
     }
 
+    @MessageMapping("/join")
+    public void joinChat(Principal principal) {
+
+        String email = principal.getName();
+
+        String chatId = matchmakingService.findMatch(email);
+
+        if (chatId != null) {
+
+            String partner = matchmakingService.getPartner(email);
+
+            if (partner != null) {
+                messagingTemplate.convertAndSendToUser(email, "/topic/match", "matched");
+                messagingTemplate.convertAndSendToUser(partner, "/topic/match", "matched");
+            }
+        }
+    }
+
     @MessageMapping("/chat")
     public void sendMessage(@Payload ChatMessage message,
                             Principal principal) {
 
-        String sender = principal.getName();
-        String partner = matchmakingService.getPartner(sender);
+        String email = principal.getName();
+        String partner = matchmakingService.getPartner(email);
 
         if (partner != null) {
-
             messagingTemplate.convertAndSendToUser(
                     partner,
                     "/topic/messages",
@@ -44,39 +56,12 @@ public class ChatController {
         }
     }
 
-    @MessageMapping("/join")
-    public void joinChat(Principal principal) {
-
-        String sessionId = principal.getName();
-        String chatId = matchmakingService.findMatch(sessionId);
-
-        if (chatId != null) {
-
-            String partner = matchmakingService.getPartner(sessionId);
-
-            // Notify current user
-            messagingTemplate.convertAndSendToUser(
-                    sessionId,
-                    "/topic/match",
-                    "matched"
-            );
-
-            // Notify partner user
-            messagingTemplate.convertAndSendToUser(
-                    partner,
-                    "/topic/match",
-                    "matched"
-            );
-        }
-    }
-
-
     @MessageMapping("/typing")
     public void typingEvent(@Payload TypingEvent event,
                             Principal principal) {
 
-        String sender = principal.getName();
-        String partner = matchmakingService.getPartner(sender);
+        String email = principal.getName();
+        String partner = matchmakingService.getPartner(email);
 
         if (partner != null) {
             messagingTemplate.convertAndSendToUser(
@@ -90,12 +75,11 @@ public class ChatController {
     @MessageMapping("/next")
     public void nextUser(Principal principal) {
 
-        String sessionId = principal.getName();
-        String partner = matchmakingService.getPartner(sessionId);
+        String email = principal.getName();
+        String partner = matchmakingService.getPartner(email);
 
-        matchmakingService.skip(sessionId);
+        matchmakingService.skip(email);
 
-        // Notify partner that stranger left
         if (partner != null) {
             messagingTemplate.convertAndSendToUser(
                     partner,
@@ -104,9 +88,6 @@ public class ChatController {
             );
         }
 
-        // Rejoin queue
         joinChat(principal);
     }
-
-
 }
