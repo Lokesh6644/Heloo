@@ -11,7 +11,6 @@ import java.util.Collections;
 
 @Service
 public class GoogleAuthService {
-
     @Value("${google.client.id}")
     private String CLIENT_ID;
 
