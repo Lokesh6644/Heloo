@@ -1,58 +1,119 @@
 body {
-  background-color: #F4F6F9;
-  font-family: Arial, sans-serif;
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
 }
 
+/* Fullscreen background */
 .auth-container {
   height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
+  background: url("../assets/heloo-bg3.jpg") no-repeat center center/cover;
+  position: relative;
 }
 
+/* Overlay */
+.auth-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.30);
+}
+
+/* Card */
 .auth-card {
-  width: 380px;
-  background: white;
-  padding: 35px;
-  border-radius: 10px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  position: relative;
+  z-index: 1;
+
+  width: 520px;
+  height: 300px;              /* 🔥 Fixed height for true centering */
+  border-radius: 20px;
+
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6);
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;    /* 🔥 Vertical center */
+  align-items: center;        /* 🔥 Horizontal center */
+
+  text-align: center;
+  padding: 0 40px;            /* Remove heavy top padding */
 }
 
+/* Title */
 .auth-card h2 {
-  margin-bottom: 20px;
-  color: #333;
+  margin: 0 0 30px 0;   /* Balanced spacing */
 }
 
-.auth-input {
+/* Ticker Container */
+.auth-ticker {
   width: 100%;
-  padding: 12px;
-  margin-bottom: 15px;
-  border: none;
-  border-radius: 6px;
-  background-color: #F1F3F6;
-  outline: none;
+  overflow: hidden;
+  white-space: nowrap;
+  box-sizing: border-box;
+  margin-bottom: 30px;
+  position: relative;
 }
 
-.auth-button {
-  width: 100%;
-  padding: 12px;
-  background-color: #5E5CE6;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: 0.2s ease;
-}
-
-.auth-button:hover {
+/* Scrolling Text */
+.auth-ticker span {
+  display: inline-block;
+  padding-left: 100%;
+  animation: scrollText 12s linear infinite;
+  font-size: 20px;
+  color: #aba813;
   opacity: 0.9;
 }
 
-.auth-link {
-  margin-top: 15px;
-  text-align: center;
-  font-size: 14px;
-  color: #5E5CE6;
-  cursor: pointer;
+/* Animation */
+@keyframes scrollText {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* Background heading */
+.bg-heading {
+  position: absolute;
+  top: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 0;
+
+  font-size: 60px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.107);
+  letter-spacing: 2px;
+
+  white-space: nowrap;
+  overflow: hidden;
+  border-right: 3px solid rgba(255, 255, 255, 0.4);
+
+  width: 0;
+  animation: typing 4s steps(35, end) forwards,
+             blink 0.8s infinite;
+}
+
+/* Typing effect */
+@keyframes typing {
+  from {
+    width: 0;
+  }
+  to {
+    width: 48%;
+  }
+}
+
+/* Cursor blink */
+@keyframes blink {
+  50% {
+    border-color: transparent;
+  }
 }
