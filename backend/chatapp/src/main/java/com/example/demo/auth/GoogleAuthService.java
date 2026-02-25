@@ -1,3 +1,4 @@
+import org.springframework.beans.factory.annotation.Value;
 package com.example.demo.auth;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
@@ -11,7 +12,8 @@ import java.util.Collections;
 @Service
 public class GoogleAuthService {
 
-    private final String CLIENT_ID = "742934103427-fblv3mdlhhfk6lu91q6pis8pmbnaoq24.apps.googleusercontent.com";
+    @Value("${google.client.id}")
+    private String CLIENT_ID;
 
     public String verifyToken(String token) {
 
