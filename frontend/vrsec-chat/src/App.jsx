@@ -4,7 +4,7 @@ import Otp from "./pages/Otp";
 import Chat from "./pages/Chat";
 
 function PrivateRoute({ children }) {
-  const token = localStorage.getItem("authToken");
+  const token = localStorage.getItem("googleToken");
   return token ? children : <Navigate to="/" />;
 }
 
