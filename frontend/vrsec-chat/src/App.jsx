@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
-import Otp from "./pages/Otp";
+ import Otp from "./pages/Otp";
 import Chat from "./pages/Chat";
 
 function PrivateRoute({ children }) {
@@ -13,7 +13,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path="/otp" element={<Otp />} />
+        <Route path="/otp" element={<Otp />} /> 
         <Route
           path="/chat"
           element={

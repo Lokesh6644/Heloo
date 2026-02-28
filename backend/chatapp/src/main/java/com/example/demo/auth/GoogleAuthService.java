@@ -19,6 +19,7 @@ public class GoogleAuthService {
     public String verifyToken(String token) {
 
         try {
+
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
                     new NetHttpTransport(),
                     GsonFactory.getDefaultInstance())
@@ -28,8 +29,13 @@ public class GoogleAuthService {
             GoogleIdToken idToken = verifier.verify(token);
 
             if (idToken != null) {
-                GoogleIdToken.Payload payload = idToken.getPayload();
-                return payload.getEmail();
+
+                String email = idToken.getPayload().getEmail();
+
+                // 🔥 STRICT COLLEGE FILTER
+                if (email != null && email.endsWith("@vrsec.ac.in")) {
+                    return email;
+                }
             }
 
         } catch (Exception e) {
