@@ -3,6 +3,7 @@ package com.example.demo.matchmaking;
 import org.springframework.stereotype.Service;
 
 import java.util.Queue;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -13,6 +14,19 @@ public class MatchmakingService {
 
     private final Queue<String> waitingUsers = new ConcurrentLinkedQueue<>();
     private final Map<String, String> activeChats = new ConcurrentHashMap<>();
+    private final Set<String> onlineUsers = ConcurrentHashMap.newKeySet();
+
+    public void userConnected(String email) {
+        onlineUsers.add(email);
+    }
+
+    public void userDisconnected(String email) {
+        onlineUsers.remove(email);
+    }
+
+    public int getOnlineCount() {
+        return onlineUsers.size();
+    }
 
     public synchronized String findMatch(String email) {
 
