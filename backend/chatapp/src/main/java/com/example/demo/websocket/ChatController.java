@@ -38,9 +38,6 @@ public class ChatController {
                 messagingTemplate.convertAndSendToUser(partner, "/topic/match", "matched");
             }
         }
-        matchmakingService.userConnected(email);
-        messagingTemplate.convertAndSend("/topic/onlineCount",
-                matchmakingService.getOnlineCount());
     }
 
     @MessageMapping("/chat")
