@@ -8,68 +8,75 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [matched, setMatched] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
-  
 
   const stompClient = useRef(null);
 
   const connect = () => {
 
-  const token = localStorage.getItem("googleToken");
+    const token = localStorage.getItem("googleToken");
 
-  if (!token) {
-    console.error("No googleToken found");
-    return;
-  }
-
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
-
-  const client = new Client({
-    brokerURL: `${backendUrl.replace("https", "wss")}/ws?token=${token}`,
-    reconnectDelay: 5000,
-    onStompError: (frame) => {
-      console.error("Broker error:", frame);
+    if (!token) {
+      console.error("No googleToken found");
+      return;
     }
-  });
 
-  client.onConnect = () => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-    console.log("Connected to production backend");
+    if (!backendUrl) {
+      console.error("VITE_BACKEND_URL not defined");
+      return;
+    }
 
-    // ✅ All subscriptions MUST be here
+    const wsUrl = backendUrl.replace(/^http/, "ws");
 
-    client.subscribe("/user/topic/match", () => {
-      setMatched(true);
+    const client = new Client({
+      brokerURL: `${wsUrl}/ws?token=${token}`,
+      reconnectDelay: 5000,
+      debug: () => {} // disable verbose logs
     });
 
-    client.subscribe("/user/topic/left", () => {
-      setMessages([]);
-      setMatched(false);
-    });
+    client.onConnect = () => {
 
-    client.subscribe("/user/topic/messages", (msg) => {
-      const body = JSON.parse(msg.body);
-      setMessages(prev => [
-        ...prev,
-        { type: "received", text: body.content }
-      ]);
-    });
+      console.log("Connected to backend");
 
-    // ✅ online count subscription moved here
-    client.subscribe("/topic/onlineCount", (msg) => {
-      setOnlineCount(msg.body);
-    });
+      // ✅ Subscribe AFTER connection
+      client.subscribe("/topic/onlineCount", (msg) => {
+        setOnlineCount(parseInt(msg.body));
+      });
 
-    // join queue
-    client.publish({
-      destination: "/app/join"
-    });
+      client.subscribe("/user/topic/match", () => {
+        setMatched(true);
+      });
+
+      client.subscribe("/user/topic/left", () => {
+        setMessages([]);
+        setMatched(false);
+      });
+
+      client.subscribe("/user/topic/messages", (msg) => {
+        const body = JSON.parse(msg.body);
+        setMessages(prev => [
+          ...prev,
+          { type: "received", text: body.content }
+        ]);
+      });
+
+      // Join matchmaking queue
+      client.publish({
+        destination: "/app/join"
+      });
+    };
+
+    client.onStompError = (frame) => {
+      console.error("Broker error:", frame);
+    };
+
+    client.activate();
+    stompClient.current = client;
   };
 
-  client.activate();
-  stompClient.current = client;
-};
-
   useEffect(() => {
+
     connect();
 
     return () => {
@@ -77,6 +84,7 @@ export default function Chat() {
         stompClient.current.deactivate();
       }
     };
+
   }, []);
 
   const nextUser = () => {
@@ -110,7 +118,9 @@ export default function Chat() {
 
   return (
     <div className="chat-container">
-    <h4>Online Users: {onlineCount}</h4>
+
+      <h4>Online Users: {onlineCount}</h4>
+
       <div className="chat-header">
         <div>
           <h3>Stranger</h3>
@@ -130,7 +140,11 @@ export default function Chat() {
 
       <div className="chat-input">
 
-        <button className="next-btn" onClick={nextUser} disabled={!matched}>
+        <button
+          className="next-btn"
+          onClick={nextUser}
+          disabled={!matched}
+        >
           Next
         </button>
 
@@ -146,7 +160,10 @@ export default function Chat() {
           placeholder="Aa"
         />
 
-        <button className="send-btn" onClick={sendMessage}>
+        <button
+          className="send-btn"
+          onClick={sendMessage}
+        >
           ➤
         </button>
 
