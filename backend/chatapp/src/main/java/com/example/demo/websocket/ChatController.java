@@ -81,7 +81,7 @@ public class ChatController {
         matchmakingService.skip(email);
         matchmakingService.userDisconnected(email);
         messagingTemplate.convertAndSend("/topic/onlineCount",
-                matchmakingService.getOnlineCount());
+                matchmakingService.getPartner(email)); // you edited which you don't know ****
 
         if (partner != null) {
             messagingTemplate.convertAndSendToUser(
