@@ -1,12 +1,10 @@
 package com.example.demo.websocket;
 
-//package com.vrsec.chatapp.websocket;
-
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.socket.config.annotation.*;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.context.annotation.Bean;
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -24,20 +22,18 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setHandshakeHandler(new UserHandshakeHandler())
                 .addInterceptors(authHandshakeInterceptor)
                 .setAllowedOriginPatterns("*");
-                //.withSockJS();
+        //.withSockJS();
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/topic");
-        //here also newlly assed ******
-        registry.setHeartbeatValue(new long[] {10000, 10000}) // Send heartbeat every 10s
-                .setTaskScheduler(taskScheduler());
+        // ⚠️ IMPORTANT: NO setHeartbeatValue HERE - it's not supported in Spring Boot 3.2.2
+        registry.enableSimpleBroker("/topic", "/queue")  // Added /queue for private messages
+                .setTaskScheduler(taskScheduler()); // Keep task scheduler for heartbeats
+
         registry.setApplicationDestinationPrefixes("/app");
+        registry.setUserDestinationPrefix("/user");
     }
-
-
-    // newly added *****************************
 
     @Bean
     public ThreadPoolTaskScheduler taskScheduler() {
@@ -46,7 +42,4 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         scheduler.setThreadNamePrefix("websocket-heartbeat-");
         return scheduler;
     }
-
-
 }
-
