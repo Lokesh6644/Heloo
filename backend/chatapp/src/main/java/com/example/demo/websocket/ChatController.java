@@ -29,6 +29,12 @@ public class ChatController {
         String email = principal.getName();
         System.out.println("User joining matchmaking: " + email);
 
+        messagingTemplate.convertAndSendToUser(
+                email,
+                "/topic/onlineCount",
+                matchmakingService.getOnlineCount()
+        );
+
         String result = matchmakingService.findMatch(email);
 
         if (result != null) {
@@ -45,12 +51,7 @@ public class ChatController {
                         "matched"
                 );
 
-                // Send match notification to partner
-                messagingTemplate.convertAndSendToUser(
-                        partner,
-                        "/topic/match",
-                        "matched"
-                );
+
 
                 System.out.println("Match notifications sent to: " + email + " and " + partner);
             }
