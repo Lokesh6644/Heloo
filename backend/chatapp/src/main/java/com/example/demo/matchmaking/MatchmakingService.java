@@ -111,34 +111,45 @@ public class MatchmakingService {
         System.out.println("User disconnected: " + email + " | Online: " + onlineUsers.size());
     }
 
-    public String findMatch(String email) {
-        // Use synchronized block for atomic operation
-        synchronized(matchLock) {
-            // Already in chat?
-            if (activeChats.containsKey(email)) {
-                return "MATCHED"; // Return constant, not UUID
-            }
+    public int getOnlineCount() {
+        return onlineUsers.size();
+    }
 
-            // Look for waiting user
-            String partner = waitingUsers.poll();
+    public synchronized String findMatch(String email) {
+        System.out.println("findMatch called for: " + email);
+        System.out.println("Waiting queue size: " + waitingUsers.size());
+        System.out.println("Online users: " + onlineUsers.size());
 
-            if (partner != null && !partner.equals(email) && onlineUsers.contains(partner)) {
-                // Create match
-                activeChats.put(email, partner);
-                activeChats.put(partner, email);
-
-                System.out.println("MATCH SUCCESS: " + email + " <-> " + partner);
-                return "MATCHED";
-            }
-
-            // No match, add to waiting
-            if (!waitingUsers.contains(email)) {
-                waitingUsers.add(email);
-                System.out.println(email + " waiting. Queue size: " + waitingUsers.size());
-            }
-
-            return null;
+        // Already in chat?
+        if (activeChats.containsKey(email)) {
+            System.out.println(email + " already in chat with: " + activeChats.get(email));
+            return "MATCHED";
         }
+
+        // Look for waiting user
+        String partner = waitingUsers.poll();
+
+        if (partner != null && !partner.equals(email) && onlineUsers.contains(partner)) {
+            // Create match
+            activeChats.put(email, partner);
+            activeChats.put(partner, email);
+
+            System.out.println("✅ MATCH CREATED: " + email + " <-> " + partner);
+            return "MATCHED";
+        }
+
+        // If partner was invalid, put them back? No, they're removed from queue
+        if (partner != null) {
+            System.out.println("Invalid partner: " + partner + " - not adding back to queue");
+        }
+
+        // No match, add to waiting
+        if (!waitingUsers.contains(email)) {
+            waitingUsers.add(email);
+            System.out.println("✅ " + email + " added to waiting queue. Queue size: " + waitingUsers.size());
+        }
+
+        return null;
     }
 
     public String getPartner(String email) {
