@@ -129,7 +129,7 @@ public class MatchmakingService {
         // Look for waiting user
         String partner = waitingUsers.poll();
 
-        if (partner != null && !partner.equals(email) /*&& onlineUsers.contains(partner)*/ ) {
+        if (partner != null && !partner.equals(email) && onlineUsers.contains(partner) ) {
             // Create match
             activeChats.put(email, partner);
             activeChats.put(partner, email);
@@ -146,7 +146,7 @@ public class MatchmakingService {
         // No match, add to waiting
         if (!waitingUsers.contains(email)) {
             waitingUsers.add(email);
-            System.out.println("✅ " + email + " added to waiting queue. Queue size: " /* + waitingUsers.size() */);
+            System.out.println("✅ " + email + " added to waiting queue. Queue size: "  + waitingUsers.size() );
         }
 
         return null;
