@@ -112,21 +112,15 @@ public class ChatController {
 
         matchmakingService.skip(email);
 
-        // Notify old partner
         if (partner != null) {
             messagingTemplate.convertAndSendToUser(
                     partner,
                     "/topic/left",
                     "Stranger disconnected"
             );
-            System.out.println("Notified " + partner + " that " + email + " left");
         }
 
-        // Join again with new match
         joinChat(principal);
-
-        // Broadcast updated online count
-        messagingTemplate.convertAndSend("/topic/onlineCount",
-                matchmakingService.getOnlineCount());
     }
+
 }
