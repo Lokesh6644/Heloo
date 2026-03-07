@@ -26,40 +26,32 @@ public class ChatController {
 
     @MessageMapping("/join")
     public void joinChat(Principal principal) {
+
         String email = principal.getName();
-        System.out.println("User joining matchmaking: " + email);
 
-        messagingTemplate.convertAndSendToUser(
-                email,
-                "/topic/onlineCount",
-                matchmakingService.getOnlineCount()
-        );
+        String chatId = matchmakingService.findMatch(email);
 
-        String result = matchmakingService.findMatch(email);
+        if (chatId != null) {
 
-        if (result != null) {
-            System.out.println("MATCH FOUND for: " + email);
-
-            // Get partner
             String partner = matchmakingService.getPartner(email);
 
             if (partner != null) {
-                // Send match notification to current user
-                messagingTemplate.convertAndSendToUser(
-                        email,
-                        "/topic/match",
-                        "matched"
-                );
 
+                // Notify both users
+                messagingTemplate.convertAndSendToUser(email, "/topic/match", "matched");
+                messagingTemplate.convertAndSendToUser(partner, "/topic/match", "matched");
 
+                // Send again after slight delay to avoid missed subscription
+                new Thread(() -> {
+                    try { Thread.sleep(300); } catch (Exception ignored) {}
 
-                System.out.println("Match notifications sent to: " + email + " and " + partner);
+                    messagingTemplate.convertAndSendToUser(email, "/topic/match", "matched");
+                    messagingTemplate.convertAndSendToUser(partner, "/topic/match", "matched");
+
+                }).start();
             }
-        } else {
-            System.out.println("No match yet for: " + email + " - added to waiting queue");
         }
     }
-
 
 
     @MessageMapping("/getOnlineCount")
