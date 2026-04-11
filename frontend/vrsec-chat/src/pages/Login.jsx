@@ -9,7 +9,7 @@ export default function Login() {
   return (
     <div className="auth-container">
       <h1 className="bg-heading">
-        Turning Hello's into Friendships...
+        Turning Hello's to Bonds...
       </h1>
 
       <div className="auth-card">
