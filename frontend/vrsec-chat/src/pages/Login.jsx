@@ -41,7 +41,6 @@ export default function Login() {
         <p className="auth-ticker">
           Sign in using your official college email (@vrsec.ac.in)
         </p>
-        {error && <p role="alert" className="auth-ticker">{error}</p>}
         <h2>Oye</h2>
         <GoogleLogin
           theme="filled_blue"
@@ -52,6 +51,27 @@ export default function Login() {
           onError={() => setError("Google sign-in failed. Please try again.")}
         />
       </div>
+
+      {error && (
+        <div className="auth-modal-backdrop" role="presentation" onClick={() => setError("")}>
+          <section
+            className="auth-error-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="auth-error-title"
+            aria-describedby="auth-error-description"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="auth-error-icon" aria-hidden="true">!</div>
+            <h2 id="auth-error-title">College email required</h2>
+            <p id="auth-error-description">{error}</p>
+            <p className="auth-error-hint">Use your official <strong>@vrsec.ac.in</strong> account to join Oye.</p>
+            <button className="auth-error-button" type="button" onClick={() => setError("")}>
+              Try again
+            </button>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
