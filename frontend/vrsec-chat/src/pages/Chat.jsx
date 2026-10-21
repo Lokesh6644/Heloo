@@ -105,12 +105,8 @@ export default function Chat() {
         }
       });
 
-      // Join matchmaking queue
-     if (!matched) {
-  client.publish({
-    destination: "/app/join"
-  });
-}
+      // Join only after subscriptions are active; repeat this after reconnects.
+      client.publish({ destination: "/app/join" });
     };
 
     client.onStompError = (frame) => {
