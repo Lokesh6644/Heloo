@@ -11,7 +11,9 @@ export default function Chat() {
   const [partnerTyping, setPartnerTyping] = useState(false); // New state for partner typing
   
   const stompClient = useRef(null);
-  const typingTimeoutRef = useRef(null); // To handle typing timeout
+  const typingTimeoutRef = useRef(null);
+  const partnerTypingTimeoutRef = useRef(null);
+  const onlineCountTimeoutRef = useRef(null);
 
   const connect = () => {
     const token = localStorage.getItem("googleToken");
@@ -31,7 +33,8 @@ export default function Chat() {
     const wsUrl = backendUrl.replace(/^http/, "ws");
 
     const client = new Client({
-      brokerURL: `${wsUrl}/ws?token=${token}`,
+      brokerURL: `${wsUrl}/ws`,
+      connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
@@ -48,13 +51,12 @@ export default function Chat() {
 
 
 
-  // Add this to request current count immediately after connect
-  setTimeout(() => {
-    // Force a request for current count by publishing to a special endpoint
-    client.publish({
-      destination: "/app/getOnlineCount"  // We'll add this endpoint
-    });
-  }, 1000);
+  if (onlineCountTimeoutRef.current) clearTimeout(onlineCountTimeoutRef.current);
+      onlineCountTimeoutRef.current = setTimeout(() => {
+        if (client.connected) {
+          client.publish({ destination: "/app/getOnlineCount" });
+        }
+      }, 100);
 
 
 
@@ -74,7 +76,10 @@ export default function Chat() {
       client.subscribe("/user/topic/left", () => {
         setMessages([]);
         setMatched(false);
-        setPartnerTyping(false); // Reset typing when partner leaves
+        setPartnerTyping(false);
+        if (partnerTypingTimeoutRef.current) clearTimeout(partnerTypingTimeoutRef.current);
+        // Rejoin the queue after the current partner leaves.
+        if (client.connected) client.publish({ destination: "/app/join" });
       });
 
       // Subscribe to messages
@@ -92,19 +97,16 @@ export default function Chat() {
         setPartnerTyping(event.typing);
         
         // Auto-hide typing indicator after 3 seconds (backup)
+        if (partnerTypingTimeoutRef.current) clearTimeout(partnerTypingTimeoutRef.current);
         if (event.typing) {
-          setTimeout(() => {
+          partnerTypingTimeoutRef.current = setTimeout(() => {
             setPartnerTyping(false);
           }, 3000);
         }
       });
 
-      // Join matchmaking queue
-     if (!matched) {
-  client.publish({
-    destination: "/app/join"
-  });
-}
+      // Join only after subscriptions are active; repeat this after reconnects.
+      client.publish({ destination: "/app/join" });
     };
 
     client.onStompError = (frame) => {
@@ -116,22 +118,18 @@ export default function Chat() {
   };
 
   useEffect(() => {
-  connect();
+    connect();
 
-  setTimeout(() => {
-    if (stompClient.current) {
-      stompClient.current.publish({
-        destination: "/app/join"
-      });
-    }
-  }, 300);
-
-  return () => {
-    if (stompClient.current) {
-      stompClient.current.deactivate();
-    }
-  };
-}, []);
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (partnerTypingTimeoutRef.current) clearTimeout(partnerTypingTimeoutRef.current);
+      if (onlineCountTimeoutRef.current) clearTimeout(onlineCountTimeoutRef.current);
+      if (stompClient.current) {
+        stompClient.current.deactivate();
+        stompClient.current = null;
+      }
+    };
+  }, []);
 
   // 👇 NEW: Handle typing events
   const handleTyping = (isTyping) => {
