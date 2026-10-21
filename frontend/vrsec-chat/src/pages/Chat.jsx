@@ -44,11 +44,15 @@ export default function Chat() {
     client.onConnect = () => {
       console.log("Connected to backend");
 
-      // Subscribe to online count
-      client.subscribe("/topic/onlineCount", (msg) => {
-        setOnlineCount(parseInt(msg.body));
-      });
+      // Subscribe to the public count broadcast.
+      const updateOnlineCount = (msg) => {
+        const count = Number.parseInt(msg.body, 10);
+        if (Number.isFinite(count)) setOnlineCount(count);
+      };
+      client.subscribe("/topic/onlineCount", updateOnlineCount);
 
+      // The backend's initial count response is sent to the current user destination.
+      client.subscribe("/user/topic/onlineCount", updateOnlineCount);
 
 
   if (onlineCountTimeoutRef.current) clearTimeout(onlineCountTimeoutRef.current);
