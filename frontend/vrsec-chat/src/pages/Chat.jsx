@@ -11,7 +11,9 @@ export default function Chat() {
   const [partnerTyping, setPartnerTyping] = useState(false); // New state for partner typing
   
   const stompClient = useRef(null);
-  const typingTimeoutRef = useRef(null);\n  const partnerTypingTimeoutRef = useRef(null);\n  const onlineCountTimeoutRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const partnerTypingTimeoutRef = useRef(null);
+  const onlineCountTimeoutRef = useRef(null);
 
   const connect = () => {
     const token = localStorage.getItem("googleToken");
@@ -31,7 +33,8 @@ export default function Chat() {
     const wsUrl = backendUrl.replace(/^http/, "ws");
 
     const client = new Client({
-      brokerURL: `${wsUrl}/ws`,\n      connectHeaders: { Authorization: `Bearer ${token}` },
+      brokerURL: `${wsUrl}/ws`,
+      connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
