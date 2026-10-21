@@ -2,96 +2,102 @@ package com.example.demo.matchmaking;
 
 import org.springframework.stereotype.Service;
 
-import java.util.Queue;
+import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.Map;
-
 
 @Service
 public class MatchmakingService {
-
     private final Queue<String> waitingUsers = new ConcurrentLinkedQueue<>();
     private final Map<String, String> activeChats = new ConcurrentHashMap<>();
     private final Set<String> onlineUsers = ConcurrentHashMap.newKeySet();
-    private final Object matchLock = new Object(); // Add lock for matching
+    private final Map<String, Set<String>> sessionsByUser = new ConcurrentHashMap<>();
 
-    public void userConnected(String email) {
+    public synchronized void userConnected(String email, String sessionId) {
+        if (email == null || email.isBlank() || sessionId == null || sessionId.isBlank()) {
+            return;
+        }
+        sessionsByUser.computeIfAbsent(email, key -> ConcurrentHashMap.newKeySet()).add(sessionId);
         onlineUsers.add(email);
-        System.out.println("User connected: " + email + " | Online: " + onlineUsers.size());
     }
 
-    public void userDisconnected(String email) {
-        onlineUsers.remove(email);
-        waitingUsers.remove(email);
+    public synchronized void userDisconnected(String email, String sessionId) {
+        if (email == null || sessionId == null) {
+            return;
+        }
 
-        // Handle active chat disconnection
+        Set<String> sessions = sessionsByUser.get(email);
+        if (sessions != null) {
+            sessions.remove(sessionId);
+            if (!sessions.isEmpty()) {
+                return; // Another tab/device for this user is still connected.
+            }
+            sessionsByUser.remove(email);
+        }
+
+        onlineUsers.remove(email);
+        waitingUsers.removeIf(email::equals);
+
         String partner = activeChats.remove(email);
         if (partner != null) {
-            activeChats.remove(partner);
-            // Don't auto-add to waiting - let them reconnect manually
+            activeChats.remove(partner, email);
         }
-        System.out.println("User disconnected: " + email + " | Online: " + onlineUsers.size());
     }
 
-    public int getOnlineCount() {
+    public synchronized int getOnlineCount() {
         return onlineUsers.size();
     }
 
     public synchronized String findMatch(String email) {
-        System.out.println("findMatch called for: " + email);
-        System.out.println("Waiting queue size: " + waitingUsers.size());
-        System.out.println("Online users: " + onlineUsers.size());
-
-        // Already in chat?
+        if (email == null || !onlineUsers.contains(email)) {
+            return null;
+        }
         if (activeChats.containsKey(email)) {
-            System.out.println(email + " already in chat with: " + activeChats.get(email));
             return "MATCHED";
         }
 
-        // Look for waiting user
-        String partner = waitingUsers.poll();
+        // Remove stale queue entries until a valid, available partner is found.
+        String partner;
+        while ((partner = waitingUsers.poll()) != null) {
+            if (partner.equals(email)) {
+                continue;
+            }
+            if (!onlineUsers.contains(partner) || activeChats.containsKey(partner)) {
+                continue;
+            }
 
-        if (partner != null && !partner.equals(email) && onlineUsers.contains(partner) ) {
-            // Create match
             activeChats.put(email, partner);
             activeChats.put(partner, email);
-
-            System.out.println("✅ MATCH CREATED: " + email + " <-> " + partner);
             return "MATCHED";
         }
 
-        // If partner was invalid, put them back? No, they're removed from queue
-        if (partner != null) {
-            System.out.println("Invalid partner: " + partner + " - not adding back to queue");
-        }
-
-        // No match, add to waiting
         if (!waitingUsers.contains(email)) {
             waitingUsers.add(email);
-            System.out.println("✅ " + email + " added to waiting queue. Queue size: "  + waitingUsers.size() );
         }
-
         return null;
     }
 
-    public String getPartner(String email) {
-        return activeChats.get(email); // Returns email for backend use only
+    public synchronized String getPartner(String email) {
+        return activeChats.get(email);
     }
 
-    public void skip(String email) {
-        synchronized(matchLock) {
-            String partner = activeChats.remove(email);
-            if (partner != null) {
-                activeChats.remove(partner);
-                // Add partner back to waiting if still online
-                if (onlineUsers.contains(partner)) {
-                    waitingUsers.add(partner);
-                }
-            }
-            waitingUsers.remove(email);
+    public synchronized void skip(String email) {
+        if (email == null) {
+            return;
         }
+
+        String partner = activeChats.remove(email);
+        if (partner != null) {
+            activeChats.remove(partner, email);
+            if (onlineUsers.contains(partner)
+                    && !activeChats.containsKey(partner)
+                    && !waitingUsers.contains(partner)) {
+                waitingUsers.add(partner);
+            }
+        }
+
+        waitingUsers.removeIf(email::equals);
     }
 }
