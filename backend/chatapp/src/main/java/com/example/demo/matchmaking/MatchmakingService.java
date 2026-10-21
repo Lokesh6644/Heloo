@@ -55,9 +55,11 @@ public class MatchmakingService {
         if (email == null || !onlineUsers.contains(email)) return null;
         if (activeChats.containsKey(email)) return "MATCHED";
 
-        // Inspect only the queue length at entry so deferred users cannot cause a loop.
+        // Prefer a new partner, but do not leave two available users waiting forever
+        // when their only possible partner is the person they most recently skipped.
         int candidatesToInspect = waitingUsers.size();
         List<String> deferred = new ArrayList<>();
+        String lastPartnerCandidate = null;
 
         for (int i = 0; i < candidatesToInspect; i++) {
             String partner = waitingUsers.poll();
@@ -65,9 +67,9 @@ public class MatchmakingService {
             if (partner.equals(email)) continue;
             if (!onlineUsers.contains(partner) || activeChats.containsKey(partner)) continue;
 
-            // Avoid immediately pairing the same two people again after Next.
             if (partner.equals(lastPartners.get(email))) {
-                deferred.add(partner);
+                if (lastPartnerCandidate == null) lastPartnerCandidate = partner;
+                else deferred.add(partner);
                 continue;
             }
 
@@ -76,10 +78,24 @@ public class MatchmakingService {
             lastPartners.remove(email);
             lastPartners.remove(partner);
             waitingUsers.addAll(deferred);
+            if (lastPartnerCandidate != null) waitingUsers.add(lastPartnerCandidate);
+            return "MATCHED";
+        }
+
+        // No alternative partner was available; pair with the last partner as a fallback.
+        if (lastPartnerCandidate != null
+                && onlineUsers.contains(lastPartnerCandidate)
+                && !activeChats.containsKey(lastPartnerCandidate)) {
+            activeChats.put(email, lastPartnerCandidate);
+            activeChats.put(lastPartnerCandidate, email);
+            lastPartners.remove(email);
+            lastPartners.remove(lastPartnerCandidate);
+            waitingUsers.addAll(deferred);
             return "MATCHED";
         }
 
         waitingUsers.addAll(deferred);
+        if (lastPartnerCandidate != null) waitingUsers.add(lastPartnerCandidate);
         if (!waitingUsers.contains(email)) waitingUsers.add(email);
         return null;
     }
