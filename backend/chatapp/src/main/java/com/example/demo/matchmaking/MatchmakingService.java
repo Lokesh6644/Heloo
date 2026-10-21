@@ -2,9 +2,11 @@ package com.example.demo.matchmaking;
 
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -12,28 +14,26 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class MatchmakingService {
     private final Queue<String> waitingUsers = new ConcurrentLinkedQueue<>();
     private final Map<String, String> activeChats = new ConcurrentHashMap<>();
+    private final Map<String, String> lastPartners = new ConcurrentHashMap<>();
     private final Set<String> onlineUsers = ConcurrentHashMap.newKeySet();
     private final Map<String, Set<String>> sessionsByUser = new ConcurrentHashMap<>();
 
     public synchronized void userConnected(String email, String sessionId) {
-        if (email == null || email.isBlank() || sessionId == null || sessionId.isBlank()) {
-            return;
-        }
+        if (email == null || email.isBlank() || sessionId == null || sessionId.isBlank()) return;
         sessionsByUser.computeIfAbsent(email, key -> ConcurrentHashMap.newKeySet()).add(sessionId);
         onlineUsers.add(email);
     }
 
-    public synchronized void userDisconnected(String email, String sessionId) {
-        if (email == null || sessionId == null) {
-            return;
-        }
+    /**
+     * @return true only when this was the user's final connected session.
+     */
+    public synchronized boolean userDisconnected(String email, String sessionId) {
+        if (email == null || sessionId == null) return false;
 
         Set<String> sessions = sessionsByUser.get(email);
         if (sessions != null) {
             sessions.remove(sessionId);
-            if (!sessions.isEmpty()) {
-                return; // Another tab/device for this user is still connected.
-            }
+            if (!sessions.isEmpty()) return false;
             sessionsByUser.remove(email);
         }
 
@@ -44,6 +44,7 @@ public class MatchmakingService {
         if (partner != null) {
             activeChats.remove(partner, email);
         }
+        return true;
     }
 
     public synchronized int getOnlineCount() {
@@ -51,31 +52,35 @@ public class MatchmakingService {
     }
 
     public synchronized String findMatch(String email) {
-        if (email == null || !onlineUsers.contains(email)) {
-            return null;
-        }
-        if (activeChats.containsKey(email)) {
-            return "MATCHED";
-        }
+        if (email == null || !onlineUsers.contains(email)) return null;
+        if (activeChats.containsKey(email)) return "MATCHED";
 
-        // Remove stale queue entries until a valid, available partner is found.
-        String partner;
-        while ((partner = waitingUsers.poll()) != null) {
-            if (partner.equals(email)) {
-                continue;
-            }
-            if (!onlineUsers.contains(partner) || activeChats.containsKey(partner)) {
+        // Inspect only the queue length at entry so deferred users cannot cause a loop.
+        int candidatesToInspect = waitingUsers.size();
+        List<String> deferred = new ArrayList<>();
+
+        for (int i = 0; i < candidatesToInspect; i++) {
+            String partner = waitingUsers.poll();
+            if (partner == null) break;
+            if (partner.equals(email)) continue;
+            if (!onlineUsers.contains(partner) || activeChats.containsKey(partner)) continue;
+
+            // Avoid immediately pairing the same two people again after Next.
+            if (partner.equals(lastPartners.get(email))) {
+                deferred.add(partner);
                 continue;
             }
 
             activeChats.put(email, partner);
             activeChats.put(partner, email);
+            lastPartners.remove(email);
+            lastPartners.remove(partner);
+            waitingUsers.addAll(deferred);
             return "MATCHED";
         }
 
-        if (!waitingUsers.contains(email)) {
-            waitingUsers.add(email);
-        }
+        waitingUsers.addAll(deferred);
+        if (!waitingUsers.contains(email)) waitingUsers.add(email);
         return null;
     }
 
@@ -84,20 +89,15 @@ public class MatchmakingService {
     }
 
     public synchronized void skip(String email) {
-        if (email == null) {
-            return;
-        }
+        if (email == null) return;
 
         String partner = activeChats.remove(email);
         if (partner != null) {
             activeChats.remove(partner, email);
-            if (onlineUsers.contains(partner)
-                    && !activeChats.containsKey(partner)
-                    && !waitingUsers.contains(partner)) {
-                waitingUsers.add(partner);
-            }
+            lastPartners.put(email, partner);
+            lastPartners.put(partner, email);
+            // The partner is re-queued when their /user/topic/left event arrives.
         }
-
         waitingUsers.removeIf(email::equals);
     }
 }
