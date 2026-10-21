@@ -117,3 +117,108 @@ body {
     border-color: transparent;
   }
 }
+
+/* Accessible college-email error modal */
+.auth-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(13, 18, 38, 0.62);
+  backdrop-filter: blur(7px);
+  animation: authFadeIn 160ms ease-out;
+}
+
+.auth-error-modal {
+  width: min(100%, 420px);
+  box-sizing: border-box;
+  padding: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 24px;
+  background: #fff;
+  color: #172033;
+  text-align: center;
+  box-shadow: 0 24px 80px rgba(10, 15, 35, 0.28);
+  animation: authModalIn 200ms ease-out;
+}
+
+.auth-error-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: #fff1f0;
+  color: #d92d20;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.auth-error-modal h2 {
+  margin: 0 0 10px;
+  color: #172033;
+  font-size: 23px;
+  letter-spacing: -0.4px;
+}
+
+.auth-error-modal p {
+  margin: 0;
+  line-height: 1.6;
+  color: #566176;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.auth-error-modal .auth-error-hint {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #707b8e;
+}
+
+.auth-error-hint strong {
+  color: #5145cd;
+}
+
+.auth-error-button {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 24px;
+  border: 0;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #6558e8, #5145cd);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.auth-error-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(81, 69, 205, 0.24);
+}
+
+.auth-error-button:focus-visible {
+  outline: 3px solid #aaa3ff;
+  outline-offset: 3px;
+}
+
+@keyframes authFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes authModalIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 560px) {
+  .auth-error-modal {
+    padding: 26px 22px;
+    border-radius: 20px;
+  }
+}
