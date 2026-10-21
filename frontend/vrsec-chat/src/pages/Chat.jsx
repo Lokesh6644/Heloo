@@ -31,7 +31,7 @@ export default function Chat() {
     const wsUrl = backendUrl.replace(/^http/, "ws");
 
     const client = new Client({
-      brokerURL: `${wsUrl}/ws?token=${encodeURIComponent(token)}`,
+      brokerURL: `${wsUrl}/ws`,\n      connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
