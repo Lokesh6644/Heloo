@@ -45,11 +45,13 @@ class MatchmakingServiceTest {
         service.skip("a@vrsec.ac.in");
 
         assertNull(service.findMatch("a@vrsec.ac.in"));
-        assertNull(service.findMatch("b@vrsec.ac.in"));
+        // With only the previous partner available, avoid leaving both users waiting forever.
+        assertEquals("MATCHED", service.findMatch("b@vrsec.ac.in"));
+        assertEquals("b@vrsec.ac.in", service.getPartner("a@vrsec.ac.in"));
 
+        service.skip("a@vrsec.ac.in");
         service.userConnected("c@vrsec.ac.in", "c-session");
-        assertEquals("MATCHED", service.findMatch("c@vrsec.ac.in"));
-        assertNotEquals("b@vrsec.ac.in", service.getPartner("c@vrsec.ac.in"));
+        assertNull(service.findMatch("c@vrsec.ac.in"));
     }
 
     @Test
