@@ -11,7 +11,6 @@ import org.springframework.web.socket.messaging.SessionSubscribeEvent;
 
 @Component
 public class WebSocketEventListener {
-
     private final MatchmakingService matchmakingService;
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -24,37 +23,27 @@ public class WebSocketEventListener {
     @EventListener
     public void handleConnect(SessionConnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        if (accessor.getUser() != null) {
-            String email = accessor.getUser().getName();
-            matchmakingService.userConnected(email);
-            System.out.println("CONNECT: " + email);
-
-            // Broadcast updated count to ALL users
-            broadcastOnlineCount();
+        if (accessor.getUser() == null || accessor.getSessionId() == null) {
+            return;
         }
+        matchmakingService.userConnected(accessor.getUser().getName(), accessor.getSessionId());
+        broadcastOnlineCount();
     }
 
     @EventListener
     public void handleDisconnect(SessionDisconnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        if (accessor.getUser() != null) {
-            String email = accessor.getUser().getName();
-            matchmakingService.userDisconnected(email);
-            System.out.println("DISCONNECT: " + email);
-
-            // Broadcast updated count to ALL users
-            broadcastOnlineCount();
+        if (accessor.getUser() == null || accessor.getSessionId() == null) {
+            return;
         }
+        matchmakingService.userDisconnected(accessor.getUser().getName(), accessor.getSessionId());
+        broadcastOnlineCount();
     }
 
     @EventListener
     public void handleSubscribe(SessionSubscribeEvent event) {
-        // When someone subscribes to onlineCount, send them the current count immediately
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        String destination = accessor.getDestination();
-
-        if ("/topic/onlineCount".equals(destination)) {
-            // Send current count to this specific user
+        if ("/topic/onlineCount".equals(accessor.getDestination()) && accessor.getUser() != null) {
             messagingTemplate.convertAndSendToUser(
                     accessor.getUser().getName(),
                     "/topic/onlineCount",
@@ -64,8 +53,6 @@ public class WebSocketEventListener {
     }
 
     private void broadcastOnlineCount() {
-        int count = matchmakingService.getOnlineCount();
-        System.out.println("Broadcasting online count: " + count);
-        messagingTemplate.convertAndSend("/topic/onlineCount", count);
+        messagingTemplate.convertAndSend("/topic/onlineCount", matchmakingService.getOnlineCount());
     }
 }
