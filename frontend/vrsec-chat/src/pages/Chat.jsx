@@ -14,6 +14,7 @@ export default function Chat() {
   const typingTimeoutRef = useRef(null);
   const partnerTypingTimeoutRef = useRef(null);
   const onlineCountTimeoutRef = useRef(null);
+  const joinRetryRef = useRef(null);
 
   const connect = () => {
     const token = localStorage.getItem("googleToken");
@@ -40,6 +41,22 @@ export default function Chat() {
       heartbeatOutgoing: 10000,
       debug: () => {} // disable verbose logs
     });
+
+    const startJoinRetry = () => {
+      if (joinRetryRef.current) clearInterval(joinRetryRef.current);
+      joinRetryRef.current = setInterval(() => {
+        if (client.connected) {
+          client.publish({ destination: "/app/join" });
+        }
+      }, 1500);
+    };
+
+    const stopJoinRetry = () => {
+      if (joinRetryRef.current) {
+        clearInterval(joinRetryRef.current);
+        joinRetryRef.current = null;
+      }
+    };
 
     client.onConnect = () => {
       console.log("Connected to backend");
@@ -72,6 +89,7 @@ export default function Chat() {
 
       // Subscribe to match events
       client.subscribe("/user/topic/match", () => {
+        stopJoinRetry();
         setMatched(true);
         setPartnerTyping(false); // Reset typing when new match starts
       });
@@ -83,7 +101,10 @@ export default function Chat() {
         setPartnerTyping(false);
         if (partnerTypingTimeoutRef.current) clearTimeout(partnerTypingTimeoutRef.current);
         // Rejoin the queue after the current partner leaves.
-        if (client.connected) client.publish({ destination: "/app/join" });
+        if (client.connected) {
+          client.publish({ destination: "/app/join" });
+          startJoinRetry();
+        }
       });
 
       // Subscribe to messages
@@ -109,8 +130,10 @@ export default function Chat() {
         }
       });
 
-      // Join only after subscriptions are active; repeat this after reconnects.
+      // Retry joining while searching so a connect/online-registration race cannot
+      // leave a student waiting forever. Reconnects run this setup again.
       client.publish({ destination: "/app/join" });
+      startJoinRetry();
     };
 
     client.onStompError = (frame) => {
@@ -128,6 +151,7 @@ export default function Chat() {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       if (partnerTypingTimeoutRef.current) clearTimeout(partnerTypingTimeoutRef.current);
       if (onlineCountTimeoutRef.current) clearTimeout(onlineCountTimeoutRef.current);
+      if (joinRetryRef.current) clearInterval(joinRetryRef.current);
       if (stompClient.current) {
         stompClient.current.deactivate();
         stompClient.current = null;
