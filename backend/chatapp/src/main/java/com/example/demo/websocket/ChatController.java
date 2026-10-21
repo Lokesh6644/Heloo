@@ -8,12 +8,16 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 
 @Controller
 public class ChatController {
+
+    private static final Logger log = LoggerFactory.getLogger(ChatController.class);
 
     private final MatchmakingService matchmakingService;
     private final SimpMessagingTemplate messagingTemplate;
@@ -28,12 +32,13 @@ public class ChatController {
     public void joinChat(Principal principal) {
 
         String email = principal.getName();
+        log.info("MATCHMAKING join received; onlineCount={}", matchmakingService.getOnlineCount());
 
         String chatId = matchmakingService.findMatch(email);
+        String partner = matchmakingService.getPartner(email);
+        log.info("MATCHMAKING join result={}; partnerFound={}", chatId == null ? "WAITING" : chatId, partner != null);
 
         if (chatId != null) {
-
-            String partner = matchmakingService.getPartner(email);
 
             if (partner != null) {
 
