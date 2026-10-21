@@ -23,9 +23,8 @@ public class WebSocketEventListener {
     @EventListener
     public void handleConnect(SessionConnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        if (accessor.getUser() == null || accessor.getSessionId() == null) {
-            return;
-        }
+        if (accessor.getUser() == null || accessor.getSessionId() == null) return;
+
         matchmakingService.userConnected(accessor.getUser().getName(), accessor.getSessionId());
         broadcastOnlineCount();
     }
@@ -33,11 +32,16 @@ public class WebSocketEventListener {
     @EventListener
     public void handleDisconnect(SessionDisconnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
-        if (accessor.getUser() == null || accessor.getSessionId() == null) {
-            return;
+        if (accessor.getUser() == null || accessor.getSessionId() == null) return;
+
+        String email = accessor.getUser().getName();
+        String partner = matchmakingService.getPartner(email);
+        boolean finalSession = matchmakingService.userDisconnected(email, accessor.getSessionId());
+
+        if (finalSession && partner != null) {
+            messagingTemplate.convertAndSendToUser(partner, "/topic/left", "Stranger disconnected");
         }
-        matchmakingService.userDisconnected(accessor.getUser().getName(), accessor.getSessionId());
-        broadcastOnlineCount();
+        if (finalSession) broadcastOnlineCount();
     }
 
     @EventListener
