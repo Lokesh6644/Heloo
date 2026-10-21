@@ -1,17 +1,19 @@
 package com.example.demo.websocket;
 
 import com.example.demo.auth.GoogleAuthService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.List;
 import java.util.Map;
 
 @Component
 public class AuthHandshakeInterceptor implements HandshakeInterceptor {
-
     private final GoogleAuthService googleAuthService;
 
     public AuthHandshakeInterceptor(GoogleAuthService googleAuthService) {
@@ -25,27 +27,23 @@ public class AuthHandshakeInterceptor implements HandshakeInterceptor {
             WebSocketHandler wsHandler,
             Map<String, Object> attributes
     ) {
+        List<String> tokens = UriComponentsBuilder.fromUri(request.getURI())
+                .build()
+                .getQueryParams()
+                .get("token");
 
-        String query = request.getURI().getQuery(); // token=xxxxx
-
-        if (query == null || !query.startsWith("token=")) {
+        if (tokens == null || tokens.size() != 1 || tokens.get(0).isBlank()) {
+            response.setStatusCode(HttpStatus.UNAUTHORIZED);
             return false;
         }
 
-        // Extract token
-        String token = query.substring(6);
-
-        // Verify Google token
-        String email = googleAuthService.verifyToken(token);
-
-        // Allow only VRSEC domain
-        if (email == null || !email.endsWith("@vrsec.ac.in")) {
+        String email = googleAuthService.verifyToken(tokens.get(0));
+        if (email == null) {
+            response.setStatusCode(HttpStatus.UNAUTHORIZED);
             return false;
         }
 
-        // Store authenticated user
         attributes.put("user", email);
-
         return true;
     }
 
@@ -56,6 +54,6 @@ public class AuthHandshakeInterceptor implements HandshakeInterceptor {
             WebSocketHandler wsHandler,
             Exception exception
     ) {
-        // Nothing required
+        // No post-handshake action required.
     }
 }
